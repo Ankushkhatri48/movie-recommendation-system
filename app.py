@@ -5,13 +5,30 @@ import requests
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import CountVectorizer
 
-# Page config
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Movie Recommender", layout="wide")
 
-# Load movie data
+# ---------------- CUSTOM CSS ----------------
+st.markdown("""
+<style>
+.stApp {
+    background-color: #0E1117;
+    color: white;
+}
+h1 {
+    color: #E50914;
+}
+.movie-title {
+    text-align: center;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- LOAD DATA ----------------
 movies = pickle.load(open('movies.pkl','rb'))
 
-# -------- CREATE SIMILARITY MATRIX --------
+# ---------------- CREATE SIMILARITY ----------------
 @st.cache_data
 def create_similarity():
     cv = CountVectorizer(max_features=5000, stop_words='english')
@@ -21,7 +38,7 @@ def create_similarity():
 
 similarity = create_similarity()
 
-# -------- POSTER FUNCTION --------
+# ---------------- FETCH POSTER ----------------
 def fetch_poster(movie_id):
     try:
         url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key=5457163f23182cf954b7007eb965982e&language=en-US"
@@ -35,7 +52,7 @@ def fetch_poster(movie_id):
     except:
         return "https://via.placeholder.com/300x450?text=Poster+Error"
 
-# -------- GENRE LIST --------
+# ---------------- GENRE LIST ----------------
 def get_genre_list():
     genres = set()
     for g in movies['genres']:
@@ -45,15 +62,19 @@ def get_genre_list():
 
 genre_list = get_genre_list()
 
-# -------- UI --------
+# ---------------- HEADER ----------------
 st.title("🎬 Movie Recommendation System")
+st.markdown("Find movies similar to your favorites instantly.")
 
-selected_genre = st.selectbox(
+# ---------------- SIDEBAR ----------------
+st.sidebar.header("🎬 Movie Filters")
+
+selected_genre = st.sidebar.selectbox(
     "Select Genre",
     ["All"] + genre_list
 )
 
-# -------- FILTER MOVIES --------
+# ---------------- FILTER MOVIES ----------------
 if selected_genre == "All":
     filtered_movies = movies
 else:
@@ -61,12 +82,14 @@ else:
 
 movie_list = filtered_movies['title'].values
 
-selected_movie = st.selectbox(
+selected_movie = st.sidebar.selectbox(
     "Select a movie",
     movie_list
 )
 
-# -------- RECOMMEND FUNCTION --------
+recommend_button = st.sidebar.button("Recommend")
+
+# ---------------- RECOMMEND FUNCTION ----------------
 def recommend(movie):
     movie_index = movies[movies['title'] == movie].index[0]
     distances = similarity[movie_index]
@@ -87,14 +110,17 @@ def recommend(movie):
 
     return recommended_movies, recommended_posters
 
-# -------- BUTTON --------
-if st.button("Recommend"):
+# ---------------- SHOW RESULTS ----------------
+if recommend_button:
 
-    names, posters = recommend(selected_movie)
+    with st.spinner("Finding best movies for you..."):
+        names, posters = recommend(selected_movie)
+
+    st.subheader("Recommended Movies")
 
     cols = st.columns(5)
 
     for i in range(5):
         with cols[i]:
-            st.image(posters[i])
-            st.caption(names[i])
+            st.image(posters[i], use_container_width=True)
+            st.markdown(f"<p class='movie-title'>{names[i]}</p>", unsafe_allow_html=True)
