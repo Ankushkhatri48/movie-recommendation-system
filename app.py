@@ -38,19 +38,20 @@ def create_similarity():
 
 similarity = create_similarity()
 
-# ---------------- FETCH POSTER ----------------
-def fetch_poster(movie_id):
+# ---------------- FETCH MOVIE DETAILS ----------------
+def fetch_movie_details(movie_id):
     try:
         url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key=5457163f23182cf954b7007eb965982e&language=en-US"
         data = requests.get(url).json()
 
-        if data.get("poster_path") is None:
-            return "https://via.placeholder.com/300x450?text=No+Poster"
+        poster = "https://image.tmdb.org/t/p/w500/" + data["poster_path"] if data.get("poster_path") else "https://via.placeholder.com/300x450"
+        rating = data.get("vote_average", "N/A")
+        overview = data.get("overview", "No description available")
 
-        return "https://image.tmdb.org/t/p/w500/" + data["poster_path"]
+        return poster, rating, overview
 
     except:
-        return "https://via.placeholder.com/300x450?text=Poster+Error"
+        return "https://via.placeholder.com/300x450", "N/A", "Error loading description"
 
 # ---------------- GENRE LIST ----------------
 def get_genre_list():
@@ -65,6 +66,18 @@ genre_list = get_genre_list()
 # ---------------- HEADER ----------------
 st.title("🎬 Movie Recommendation System")
 st.markdown("Find movies similar to your favorites instantly.")
+
+# ---------------- TRENDING MOVIES ----------------
+st.markdown("### 🔥 Trending Movies")
+
+trending = movies.sample(5)
+cols = st.columns(5)
+
+for i, col in enumerate(cols):
+    with col:
+        poster, rating, _ = fetch_movie_details(trending.iloc[i].movie_id)
+        st.image(poster, use_container_width=True)
+        st.caption(trending.iloc[i].title)
 
 # ---------------- SIDEBAR ----------------
 st.sidebar.header("🎬 Movie Filters")
@@ -91,6 +104,7 @@ recommend_button = st.sidebar.button("Recommend")
 
 # ---------------- RECOMMEND FUNCTION ----------------
 def recommend(movie):
+
     movie_index = movies[movies['title'] == movie].index[0]
     distances = similarity[movie_index]
 
@@ -100,27 +114,43 @@ def recommend(movie):
         key=lambda x: x[1]
     )[1:6]
 
-    recommended_movies = []
-    recommended_posters = []
+    names = []
+    posters = []
+    ratings = []
+    overviews = []
 
     for i in movies_list:
-        movie_id = movies.iloc[i[0]].movie_id
-        recommended_movies.append(movies.iloc[i[0]].title)
-        recommended_posters.append(fetch_poster(movie_id))
 
-    return recommended_movies, recommended_posters
+        movie_id = movies.iloc[i[0]].movie_id
+
+        poster, rating, overview = fetch_movie_details(movie_id)
+
+        names.append(movies.iloc[i[0]].title)
+        posters.append(poster)
+        ratings.append(rating)
+        overviews.append(overview)
+
+    return names, posters, ratings, overviews
 
 # ---------------- SHOW RESULTS ----------------
 if recommend_button:
 
     with st.spinner("Finding best movies for you..."):
-        names, posters = recommend(selected_movie)
 
-    st.subheader("Recommended Movies")
+        names, posters, ratings, overviews = recommend(selected_movie)
+
+    st.subheader("🎬 Recommended Movies")
 
     cols = st.columns(5)
 
     for i in range(5):
+
         with cols[i]:
+
             st.image(posters[i], use_container_width=True)
+
             st.markdown(f"<p class='movie-title'>{names[i]}</p>", unsafe_allow_html=True)
+
+            st.write(f"⭐ Rating: {ratings[i]}")
+
+            st.caption(overviews[i][:120] + "...")
