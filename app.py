@@ -2,13 +2,24 @@ import streamlit as st
 import pickle
 import pandas as pd
 import requests
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import CountVectorizer
 
 # Page config
 st.set_page_config(page_title="Movie Recommender", layout="wide")
 
-# Load model files
+# Load movie data
 movies = pickle.load(open('movies.pkl','rb'))
-similarity = pickle.load(open('similarity.pkl','rb'))
+
+# -------- CREATE SIMILARITY MATRIX --------
+@st.cache_data
+def create_similarity():
+    cv = CountVectorizer(max_features=5000, stop_words='english')
+    vectors = cv.fit_transform(movies['tags']).toarray()
+    similarity = cosine_similarity(vectors)
+    return similarity
+
+similarity = create_similarity()
 
 # -------- POSTER FUNCTION --------
 def fetch_poster(movie_id):
@@ -24,7 +35,7 @@ def fetch_poster(movie_id):
     except:
         return "https://via.placeholder.com/300x450?text=Poster+Error"
 
-# -------- GET GENRE LIST --------
+# -------- GENRE LIST --------
 def get_genre_list():
     genres = set()
     for g in movies['genres']:
