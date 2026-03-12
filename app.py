@@ -65,19 +65,7 @@ genre_list = get_genre_list()
 
 # ---------------- HEADER ----------------
 st.title("🎬 Movie Recommendation System")
-st.markdown("Find movies similar to your favorites instantly.")
-
-# ---------------- TRENDING MOVIES ----------------
-st.markdown("### 🔥 Trending Movies")
-
-trending = movies.sample(5)
-cols = st.columns(5)
-
-for i, col in enumerate(cols):
-    with col:
-        poster, rating, _ = fetch_movie_details(trending.iloc[i].movie_id)
-        st.image(poster, use_container_width=True)
-        st.caption(trending.iloc[i].title)
+st.markdown("Find movies similar to your favorite movies.")
 
 # ---------------- SIDEBAR ----------------
 st.sidebar.header("🎬 Movie Filters")
